@@ -5,54 +5,55 @@ LOCAL=False
 
 if LOCAL == False:
    stub = modal.Stub()
-   image = modal.Image.debian_slim().pip_install(["hopsworks==3.0.4"]) 
+   image = modal.Image.debian_slim().pip_install(["hopsworks","joblib","seaborn","sklearn","dataframe-image"]) 
 
    @stub.function(image=image, schedule=modal.Period(days=1), secret=modal.Secret.from_name("HOPSWORKS_API_KEY"))
    def f():
        g()
 
 
-def generate_flower(name, sepal_len_max, sepal_len_min, sepal_width_max, sepal_width_min, 
-                    petal_len_max, petal_len_min, petal_width_max, petal_width_min):
+def generate_passenger(survived, pclass_min, pclass_max, 
+                    age_max, age_min, sibsp_min, sibsp_max,parch_min,parch_max,fare_max,fare_min,embarked_min,
+                     embarked_max):
     """
-    Returns a single iris flower as a single row in a DataFrame
+    Returns a single passenger as a single row in a DataFrame
     """
     import pandas as pd
     import random
 
-    df = pd.DataFrame({ "sepal_length": [random.uniform(sepal_len_max, sepal_len_min)],
-                       "sepal_width": [random.uniform(sepal_width_max, sepal_width_min)],
-                       "petal_length": [random.uniform(petal_len_max, petal_len_min)],
-                       "petal_width": [random.uniform(petal_width_max, petal_width_min)]
+    #survived = random.randint(0,1)
+
+    passenger_df = pd.DataFrame({ "pclass": [random.randint(pclass_min, pclass_max)],
+                       "sex": [random.randint(0, 1)],
+                       "age": [random.uniform(age_min, age_max)],
+                       "sibsp": [random.randint(sibsp_min, sibsp_max)],
+                       "parch":[random.randint(parch_min,parch_max)],
+                       "embarked":[random.randint(embarked_min,embarked_max)],
+                       "fare":[random.uniform(fare_min,fare_max)]
                       })
-    df['variety'] = name
-    return df
+    passenger_df['survived'] = survived
+    return passenger_df
 
 
-def get_random_iris_flower():
+def get_random_titanic_passenger():
     """
-    Returns a DataFrame containing one random iris flower
+    Returns a DataFrame containing one random Titanic passenger
     """
     import pandas as pd
     import random
 
-    virginica_df = generate_flower("Virginica", 8, 5.5, 3.8, 2.2, 7, 4.5, 2.5, 1.4)
-    versicolor_df = generate_flower("Versicolor", 7.5, 4.5, 3.5, 2.1, 3.1, 5.5, 1.8, 1.0)
-    setosa_df =  generate_flower("Setosa", 6, 4.5, 4.5, 2.3, 1.2, 2, 0.7, 0.3)
-
-    # randomly pick one of these 3 and write it to the featurestore
-    pick_random = random.uniform(0,3)
-    if pick_random >= 2:
-        iris_df = virginica_df
-        print("Virginica added")
-    elif pick_random >= 1:
-        iris_df = versicolor_df
-        print("Versicolor added")
+    survived_df = generate_passenger(1,0,3,80,0.42,0,3,0,2,512.3292,0,1,3)
+    dead_df = generate_passenger(0,0,3,74,1,0,3,0,4,227.535,0,1,3)
+    # randomly pick one of these  and write it to the featurestore
+    pick_random = random.uniform(0,2)
+    if pick_random >= 1:
+        passenger_df = survived_df
+        print("Survived added")
     else:
-        iris_df = setosa_df
-        print("Setosa added")
+        passenger_df = dead_df
+        print("Dead added")
 
-    return iris_df
+    return passenger_df
 
 
 def g():
@@ -62,10 +63,10 @@ def g():
     project = hopsworks.login()
     fs = project.get_feature_store()
 
-    iris_df = get_random_iris_flower()
+    passenger_df = get_random_titanic_passenger()
 
-    iris_fg = fs.get_feature_group(name="iris_modal",version=1)
-    iris_fg.insert(iris_df, write_options={"wait_for_job" : False})
+    passenger_fg = fs.get_feature_group(name="titanic_modal",version=1)
+    passenger_fg.insert(passenger_df, write_options={"wait_for_job" : False})
 
 if __name__ == "__main__":
     if LOCAL == True :
